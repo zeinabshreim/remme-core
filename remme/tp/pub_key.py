@@ -157,7 +157,7 @@ class PubKeyHandler(BasicHandler):
 
         return {transaction_payload.address: data}
 
-    def _extend_pub_key_validity_payload(self, con, signer_pubkey, transaction_payload):
+    def _extend_pub_key_validity_payload(self, context, signer_pubkey, transaction_payload):
         data = get_data(context, PubKeyStorage, transaction_payload.address)
         if data is None:
             raise InvalidTransaction('No such pub key.')
@@ -165,8 +165,12 @@ class PubKeyHandler(BasicHandler):
             raise InvalidTransaction('Only owner can extend the vailidity time.')
         if data.revoked:
             raise InvalidTransaction('The pub key was revoked.')
-        if transaction_payload.valid_to - transaction_payload.valid_from > PUB_KEY_MAX_VALIDITY:
+        valid_from = datetime.fromtimestamp(transaction_payload.valid_from)
+        valid_to = datetime.fromtimestamp(transaction_payload.valid_to)
+        if valid_to - valid_from > PUB_KEY_MAX_VALIDITY:
             raise InvalidTransaction('The public key validity exceeds the maximum value.')
-        data.valid_to = transaction_payload.valid_to
-        data.valid_from = transaction_payload.valid_from
+        data.payload.valid_to = transaction_payload.valid_to
+        data.payload.valid_from = transaction_payload.valid_from
+        LOGGER.info(f'Changed the validity of public key {transaction_payload.address} '
+                     'to ({transaction_payload.valid_from}, {transaction_payload.valid_to})')
         return {transaction_payload.address: data}
