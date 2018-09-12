@@ -199,7 +199,7 @@ class PubKeyTestCase(HelperTestCase):
         data.payload.CopyFrom(transaction_payload)
         data.revoked = False
 
-        context.client.extend_pub_key_validity(cert_address, transaction_payload.valid_from + 1, transaction_payload.valid_to + 1)
+        context.client.extend_pub_key_validity(cert_address, valid_from + 1, valid_to + 1)
 
         self.expect_get({cert_address: data})
 
@@ -209,3 +209,67 @@ class PubKeyTestCase(HelperTestCase):
         self.expect_set({cert_address: data})
 
         self.expect_ok()
+
+    
+    @test
+    def test_extend_wrong_duration(self):
+        context = self.get_context()
+        cert, key, key_export = create_certificate(context.pub_key_payload)
+        crt_export, crt_bin, crt_sig, rem_sig, pub_key, \
+            valid_from, valid_to = get_crt_export_bin_sig_rem_sig(cert, key, context.client)
+        transaction_payload = context.client.get_new_pub_key_payload(pub_key, rem_sig, crt_sig, valid_from, valid_to)
+        cert_address = PubKeyHandler().make_address_from_data(pub_key)
+
+        data = PubKeyStorage()
+        data.owner = self.account_signer1.get_public_key().as_hex()
+        data.payload.CopyFrom(transaction_payload)
+        data.revoked = False
+
+        context.client.extend_pub_key_validity(cert_address,
+                                               int(valid_from - PUB_KEY_MAX_VALIDITY.total_seconds()),
+                                               int(valid_to + PUB_KEY_MAX_VALIDITY.total_seconds()))
+
+        self.expect_get({cert_address: data})
+
+        self.expect_invalid_transaction()
+
+    @test
+    def test_extend_wrong_signer(self):
+        context = self.get_context()
+        cert, key, key_export = create_certificate(context.pub_key_payload)
+        crt_export, crt_bin, crt_sig, rem_sig, pub_key, \
+            valid_from, valid_to = get_crt_export_bin_sig_rem_sig(cert, key, context.client)
+        transaction_payload = context.client.get_new_pub_key_payload(pub_key, rem_sig, crt_sig, valid_from, valid_to)
+        cert_address = PubKeyHandler().make_address_from_data(pub_key)
+ 
+        data = PubKeyStorage()
+        data.owner = self.account_signer2.get_public_key().as_hex()
+        data.payload.CopyFrom(transaction_payload)
+        data.revoked = False
+
+        context.client.extend_pub_key_validity(cert_address, transaction_payload.valid_from + 1, transaction_payload.valid_to + 1)
+
+        self.expect_get({cert_address: data})
+
+        self.expect_invalid_transaction()
+
+    @test
+    def test_extend_revoked_certificate(self):
+        context = self.get_context()
+        cert, key, key_export = create_certificate(context.pub_key_payload)
+        crt_export, crt_bin, crt_sig, rem_sig, pub_key, \
+            valid_from, valid_to = get_crt_export_bin_sig_rem_sig(cert, key, context.client)
+        transaction_payload = context.client.get_new_pub_key_payload(pub_key, rem_sig, crt_sig, valid_from, valid_to)
+        cert_address = PubKeyHandler().make_address_from_data(pub_key)
+
+        data = PubKeyStorage()
+        data.owner = self.account_signer1.get_public_key().as_hex()
+        data.payload.CopyFrom(transaction_payload)
+        data.revoked = True
+
+        context.client.extend_pub_key_validity(cert_address, transaction_payload.valid_from + 1, transaction_payload.valid_to + 1)
+
+        self.expect_get({cert_address: data})
+
+        self.expect_invalid_transaction()
+
