@@ -169,12 +169,18 @@ class PubKeyHandler(BasicHandler):
             raise InvalidTransaction('Only owner can extend the vailidity time.')
         if data.revoked:
             raise InvalidTransaction('The pub key was revoked.')
+        
         valid_from = datetime.fromtimestamp(transaction_payload.valid_from)
         valid_to = datetime.fromtimestamp(transaction_payload.valid_to)
         if valid_to - valid_from > PUB_KEY_MAX_VALIDITY:
             raise InvalidTransaction('The public key validity exceeds the maximum value.')
         data.payload.valid_to = transaction_payload.valid_to
         data.payload.valid_from = transaction_payload.valid_from
+        
+        account_address = AccountHandler().make_address_from_data(signer_pubkey)
+        transfer_state = self._transfer_fee(context, PUB_KEY_STORE_PRICE, account_address)
+
         LOGGER.info(f'Changed the validity of public key {transaction_payload.address} '
                      'to ({transaction_payload.valid_from}, {transaction_payload.valid_to})')
-        return {transaction_payload.address: data}
+
+        return {transaction_payload.address: data, **transfer_state}

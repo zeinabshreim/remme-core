@@ -121,7 +121,12 @@ class PubKeyClient(BasicClient):
 
     def extend_pub_key_validity(self, crt_address, valid_from, valid_to):
         payload = self.get_extend_payload(crt_address, valid_from, valid_to)
-        addresses_input = addresses_output = [crt_address]
+        account_address = AccountHandler().make_address_from_data(self._signer.get_public_key().as_hex())
+        settings_address = _make_settings_key('remme.economy_enabled')
+        storage_pub_key = _make_settings_key(SETTINGS_STORAGE_PUB_KEY)
+        storage_address = AccountHandler().make_address_from_data(storage_pub_key)
+        addresses_input = [crt_address, account_address, settings_address, self.get_user_address(), storage_pub_key]
+        addresses_output = [crt_address, self.get_user_address(), storage_address]
         return self._send_transaction(PubKeyMethod.EXTEND_VALIDITY, payload, addresses_input, addresses_output)
 
     def get_signer_pubkey(self):
