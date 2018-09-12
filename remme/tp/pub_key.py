@@ -68,6 +68,24 @@ class PubKeyHandler(BasicHandler):
             }
         }
 
+    def _transfer_fee(self, context, amount, account_address):
+        is_economy_enabled = _get_setting_value(context,
+                                                'remme.economy_enabled',
+                                                'true').lower()
+        if is_economy_enabled == 'true':
+            storage_pub_key = _get_setting_value(context, SETTINGS_STORAGE_PUB_KEY)
+            if not storage_pub_key:
+                raise InvalidTransaction('The storage public key not set.')
+            storage_address = AccountHandler() \
+                .make_address_from_data(storage_pub_key)
+
+            if storage_address != account_address:
+                transfer_state = AccountHandler() \
+                    .create_transfer(context, account_address, storage_address,
+                                     amount)
+                return transfer_state
+            return {}
+
     def _store_pub_key(self, context, signer_pubkey, transaction_payload):
         address = self.make_address_from_data(transaction_payload.public_key)
         LOGGER.info('Pub key address {}'.format(address))
@@ -118,25 +136,11 @@ class PubKeyHandler(BasicHandler):
             account = Account()
 
         state = {account_address: account, address: data}
-        is_economy_enabled = _get_setting_value(context,
-                                                'remme.economy_enabled',
-                                                'true').lower()
-        if is_economy_enabled == 'true':
-            storage_pub_key = _get_setting_value(context,
-                                                 SETTINGS_STORAGE_PUB_KEY)
-            if not storage_pub_key:
-                raise InvalidTransaction('The storage public key not set.')
-
-            storage_address = AccountHandler() \
-                .make_address_from_data(storage_pub_key)
-
-            if storage_address != account_address:
-                transfer_state = AccountHandler() \
-                    .create_transfer(context, account_address, storage_address,
-                                     PUB_KEY_STORE_PRICE)
-                state.update(transfer_state)
-                # update account from transfer state
-                account = transfer_state[account_address]
+        
+        transfer_state = self._transfer_fee(context, PUB_KEY_STORE_PRICE, account_address)
+        state.update(transfer_state)
+        # update account from transfer state
+        account = transfer_state[account_address]
 
         if address not in account.pub_keys:
             account.pub_keys.append(address)
