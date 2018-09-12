@@ -31,7 +31,10 @@ from remme.tp.account import AccountHandler
 from remme.protos.account_pb2 import Account
 from remme.protos.pub_key_pb2 import (
     PubKeyStorage,
-    NewPubKeyPayload, RevokePubKeyPayload, PubKeyMethod
+    NewPubKeyPayload,
+    RevokePubKeyPayload,
+    ExtendPubKeyValidityPayload,
+    PubKeyMethod
 )
 from remme.settings.helper import _get_setting_value
 
@@ -58,6 +61,10 @@ class PubKeyHandler(BasicHandler):
             PubKeyMethod.REVOKE: {
                 'pb_class': RevokePubKeyPayload,
                 'processor': self._revoke_pub_key
+            },
+            PubKeyMethod.EXTEND_VALIDITY: {
+                'pb_class': ExtendPubKeyValidityPayload,
+                'processor': self._extend_pub_key_validity_payload
             }
         }
 
@@ -148,4 +155,18 @@ class PubKeyHandler(BasicHandler):
 
         LOGGER.info('Revoked the pub key on address {}'.format(transaction_payload.address))
 
+        return {transaction_payload.address: data}
+
+    def _extend_pub_key_validity_payload(self, con, signer_pubkey, transaction_payload):
+        data = get_data(context, PubKeyStorage, transaction_payload.address)
+        if data is None:
+            raise InvalidTransaction('No such pub key.')
+        if signer_pubkey != data.owner:
+            raise InvalidTransaction('Only owner can extend the vailidity time.')
+        if data.revoked:
+            raise InvalidTransaction('The pub key was revoked.')
+        if transaction_payload.valid_to - transaction_payload.valid_from > PUB_KEY_MAX_VALIDITY:
+            raise InvalidTransaction('The public key validity exceeds the maximum value.')
+        data.valid_to = transaction_payload.valid_to
+        data.valid_from = transaction_payload.valid_from
         return {transaction_payload.address: data}
