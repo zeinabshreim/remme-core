@@ -17,7 +17,10 @@ import datetime
 
 from remme.protos.pub_key_pb2 import (
     PubKeyStorage,
-    NewPubKeyPayload, RevokePubKeyPayload, PubKeyMethod
+    NewPubKeyPayload,
+    RevokePubKeyPayload,
+    ExtendPubKeyValidityPayload,
+    PubKeyMethod
 )
 from remme.clients.basic import BasicClient
 from remme.tp.pub_key import PubKeyHandler
@@ -57,6 +60,15 @@ class PubKeyClient(BasicClient):
     def get_revoke_payload(self, crt_address):
         payload = RevokePubKeyPayload()
         payload.address = crt_address
+
+        return payload
+
+    @classmethod
+    def get_extend_payload(self, crt_address, valid_from, valid_to):
+        payload = ExtendPubKeyValidityPayload()
+        payload.address = crt_address
+        payload.valid_from = valid_from
+        payload.valid_to = valid_to
 
         return payload
 
@@ -106,6 +118,11 @@ class PubKeyClient(BasicClient):
         addresses_input = [crt_address]
         addresses_output = addresses_input
         return self._send_transaction(PubKeyMethod.REVOKE, payload, addresses_input, addresses_output)
+
+    def extend_pub_key_validity(self, crt_address, valid_from, valid_to):
+        payload = self.get_extend_payload(crt_address, valid_from, valid_to)
+        addresses_input = addresses_output = [crt_address]
+        return self._send_transaction(PubKeyMethod.EXTEND_VALIDITY, payload, addresses_input, addresses_output)
 
     def get_signer_pubkey(self):
         return self._signer.get_public_key().as_hex()
