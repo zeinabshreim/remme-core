@@ -76,11 +76,8 @@ class BasicClient:
 
         try:
             pub_key = self.get_public_key()
-            with open(PUB_KEY_FILE, 'r') as pub_key_file:
-                pub_key_saved = pub_key_file.read()
-            if pub_key_saved != pub_key:
-                with open(PUB_KEY_FILE, 'w') as pub_key_file:
-                    pub_key_file.write(pub_key)
+            with open(PUB_KEY_FILE, 'w') as pub_key_file:
+                pub_key_file.write(pub_key)
         except IOError as e:
             LOGGER.warn('Couldn not write down the public key file.')
 
