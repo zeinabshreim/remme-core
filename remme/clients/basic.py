@@ -49,7 +49,7 @@ from remme.shared.exceptions import ClientException, KeyNotFound
 from remme.shared.utils import hash512, get_batch_id, message_to_dict
 from remme.shared.stream import Stream
 from remme.tp.account import AccountHandler, is_address
-from remme.settings import PRIV_KEY_FILE
+from remme.settings import PRIV_KEY_FILE, PUB_KEY_FILE
 from remme.settings.default import load_toml_with_defaults
 
 
@@ -73,6 +73,16 @@ class BasicClient:
         except ClientException as e:
             LOGGER.warn('Could not set up signer from file, detailed: %s', e)
             self._signer = self.generate_signer(keyfile)
+
+        try:
+            pub_key = self.get_public_key()
+            with open(PUB_KEY_FILE, 'r') as pub_key_file:
+                pub_key_saved = pub_key_file.read()
+            if pub_key_saved != pub_key:
+                with open(PUB_KEY_FILE, 'w') as pub_key_file:
+                    pub_key_file.write(pub_key)
+        except IOError as e:
+            LOGGER.warn('Couldn not write down the public key file.')
 
     @staticmethod
     def get_signer_priv_key_from_file(keyfile):
