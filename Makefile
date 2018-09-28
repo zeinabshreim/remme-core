@@ -13,14 +13,17 @@
 # limitations under the License.
 # ------------------------------------------------------------------------
 
-.PHONY: build clean run_genesis run_genesis_bg stop_genesis run run_bg stop
-.PHONY: build_docs run_docs run_logio run_logio_bg stop_logio test release
-.PHONY: docker_push
+.PHONY: clean run_genesis run_genesis_bg stop_genesis run run_bg stop run_docs
+.PHONY: run_logio run_logio_bg stop_logio test release docker_push
+
+BUILD_DEPS=$(wildcard build/** protos/** remme/** scripts/** Dockerfile requirements.txt setup.py)
+TEST_DEPS=$(wildcard tests/**)
+DOCS_DEPS=$(wildcard docs/**)
 
 RUN_SCRIPT=./scripts/run.sh
 BUILD_DIR=./build
 
-build:
+build: $(BUILD_DEPS)
 	$(BUILD_DIR)/build.sh
 
 clean:
@@ -47,7 +50,7 @@ run_bg: build
 stop:
 	$(RUN_SCRIPT) -d
 
-build_docs:
+docs: $(DOCS_DEPS)
 	$(BUILD_DIR)/build-docs.sh
 
 run_docs:
@@ -62,7 +65,7 @@ run_logio_bg:
 stop_logio:
 	$(RUN_SCRIPT) -l -d
 
-test:
+test: $(BUILD_DEPS) $(TEST_DEPS)
 	$(BUILD_DIR)/test.sh
 
 release:
