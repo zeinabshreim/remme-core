@@ -13,75 +13,57 @@
 # limitations under the License.
 # ------------------------------------------------------------------------
 
-RELEASE_NUMBER ?= $(shell git describe --abbrev=0 --tags)
+.PHONY: build clean run_genesis run_genesis_bg stop_genesis run run_bg stop
+.PHONY: build_docs run_docs run_logio run_logio_bg stop_logio test release
+.PHONY: docker_push
 
-COMPOSE_DIR = ./docker-compose
-COMPOSE_BUILD = $(COMPOSE_DIR)/base.yml
-COMPOSE_BASE = $(COMPOSE_DIR)/base.yml
-COMPOSE_GENESIS = $(COMPOSE_DIR)/genesis.yml
-
-BUILD = docker-compose -f $(COMPOSE_BUILD) build
-GENESIS_PREAMBLE = docker-compose -f $(COMPOSE_BASE) -f $(COMPOSE_GENESIS) --project-name remme
-RUN_GENESIS = $(GENESIS_PREAMBLE) up
-RUN_PREAMBLE = docker-compose -f $(COMPOSE_BASE) --project-name remme
-RUN = $(RUN_PREAMBLE) up
-LOGIO_PREAMBLE = docker-compose -f $(COMPOSE_DIR)/logio.yml --project-name remme
-LOGIO = $(LOGIO_PREAMBLE) up
-
-include ./config/network-config.env
-
-.PHONY: release
+RUN_SCRIPT=./scripts/run.sh
+BUILD_DIR=./build
 
 build:
-	git submodule update --init
-	$(BUILD)
+	$(BUILD_DIR)/build.sh
 
-rebuild:
-	$(BUILD) --no-cache
+clean:
+	$(BUILD_DIR)/clean.sh
+
+docker_push:
+	$(BUILD_DIR)/push-docker.sh
 
 run_genesis: build
-	$(RUN_GENESIS)
+	$(RUN_SCRIPT) -g -u
 
 run_genesis_bg: build
-	$(RUN_GENESIS) -d
+	$(RUN_SCRIPT) -g -u -b
 
 stop_genesis:
-	$(GENESIS_PREAMBLE) down
+	$(RUN_SCRIPT) -g -d
 
 run: build
-	$(RUN)
+	$(RUN_SCRIPT) -u
 
 run_bg: build
-	$(RUN) -d
+	$(RUN_SCRIPT) -u -b
 
 stop:
-	$(RUN_PREAMBLE) down
+	$(RUN_SCRIPT) -d
+
+build_docs:
+	$(BUILD_DIR)/build-docs.sh
 
 run_docs:
-	docker-compose -f $(COMPOSE_DIR)/docs.yml up --build
+	$(BUILD_DIR)/docs-server.sh
 
 run_logio:
-	$(LOGIO)
+	$(RUN_SCRIPT) -l -u
 
 run_logio_bg:
-	$(LOGIO) -d
+	$(RUN_SCRIPT) -l -u -b
 
 stop_logio:
-	$(LOGIO_PREAMBLE) down
+	$(RUN_SCRIPT) -l -d
 
 test:
-	docker build --target build -t remme/remme-core-dev:latest .
-	docker-compose -f $(COMPOSE_DIR)/test.yml up --build --abort-on-container-exit
+	$(BUILD_DIR)/test.sh
 
 release:
-	git checkout $(RELEASE_NUMBER)
-	$(BUILD) --no-cache
-	mkdir $(RELEASE_NUMBER)-release
-	mkdir $(RELEASE_NUMBER)-release/docker-compose
-	cp {run,genesis}.sh ./$(RELEASE_NUMBER)-release
-	cp $(COMPOSE_BASE) ./$(RELEASE_NUMBER)-release/docker-compose
-	cp $(COMPOSE_GENESIS) ./$(RELEASE_NUMBER)-release/docker-compose
-	docker tag remme/remme-core:latest remme/remme-core:$(RELEASE_NUMBER)
-	sed -i -e 's/remme-core:latest/remme-core:$(RELEASE_NUMBER)/' $(RELEASE_NUMBER)-release/docker-compose/*.yml
-	cp -R config ./$(RELEASE_NUMBER)-release
-	git checkout @{-1}
+	$(BUILD_DIR)/release.sh
