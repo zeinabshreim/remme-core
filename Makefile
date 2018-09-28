@@ -15,45 +15,72 @@
 
 RELEASE_NUMBER ?= $(shell git describe --abbrev=0 --tags)
 
+COMPOSE_DIR = ./docker-compose
+COMPOSE_BUILD = $(COMPOSE_DIR)/base.yml
+COMPOSE_BASE = $(COMPOSE_DIR)/base.yml
+COMPOSE_GENESIS = $(COMPOSE_DIR)/genesis.yml
+
+BUILD = docker-compose -f $(COMPOSE_BUILD) build
+GENESIS_PREAMBLE = docker-compose -f $(COMPOSE_BASE) -f $(COMPOSE_GENESIS) --project-name remme
+RUN_GENESIS = $(GENESIS_PREAMBLE) up
+RUN_PREAMBLE = docker-compose -f $(COMPOSE_BASE) --project-name remme
+RUN = $(RUN_PREAMBLE) up
+LOGIO_PREAMBLE = docker-compose -f $(COMPOSE_DIR)/logio.yml --project-name remme
+LOGIO = $(LOGIO_PREAMBLE) up
+
 include ./config/network-config.env
 
 .PHONY: release
 
 build:
 	git submodule update --init
-	docker-compose -f docker-compose/build.yml build
+	$(BUILD)
 
-restart_dev:
-	docker-compose -f docker-compose/base.yml -f docker-compose/genesis.yml --project-name remme down
-	docker-compose -f docker-compose/build.yml build
-	docker-compose -f docker-compose/base.yml -f docker-compose/genesis.yml --project-name remme up -d
+rebuild:
+	$(BUILD) --no-cache
 
-run_dev_no_genesis: build
-	docker-compose -f docker-compose/base.yml up
+run_genesis: build
+	$(RUN_GENESIS)
 
-run_dev: build
-	docker-compose -f docker-compose/base.yml -f docker-compose/genesis.yml --project-name remme up
+run_genesis_bg: build
+	$(RUN_GENESIS) -d
+
+stop_genesis:
+	$(GENESIS_PREAMBLE) down
+
+run: build
+	$(RUN)
+
+run_bg: build
+	$(RUN) -d
+
+stop:
+	$(RUN_PREAMBLE) down
 
 run_docs:
-	docker-compose -f docker-compose/docs.yml up --build
+	docker-compose -f $(COMPOSE_DIR)/docs.yml up --build
 
 run_logio:
-	docker-compose -f docker-compose/logio.yml --project-name remme up 
+	$(LOGIO)
+
+run_logio_bg:
+	$(LOGIO) -d
+
+stop_logio:
+	$(LOGIO_PREAMBLE) down
 
 test:
 	docker build --target build -t remme/remme-core-dev:latest .
-	docker-compose -f docker-compose/test.yml up --build --abort-on-container-exit
-
-rebuild_docker:
-	docker-compose -f docker-compose/base.yml build --no-cache
+	docker-compose -f $(COMPOSE_DIR)/test.yml up --build --abort-on-container-exit
 
 release:
 	git checkout $(RELEASE_NUMBER)
-	docker-compose -f docker-compose/build.yml build
+	$(BUILD) --no-cache
 	mkdir $(RELEASE_NUMBER)-release
 	mkdir $(RELEASE_NUMBER)-release/docker-compose
 	cp {run,genesis}.sh ./$(RELEASE_NUMBER)-release
-	cp docker-compose/{base,genesis}.yml ./$(RELEASE_NUMBER)-release/docker-compose
+	cp $(COMPOSE_BASE) ./$(RELEASE_NUMBER)-release/docker-compose
+	cp $(COMPOSE_GENESIS) ./$(RELEASE_NUMBER)-release/docker-compose
 	docker tag remme/remme-core:latest remme/remme-core:$(RELEASE_NUMBER)
 	sed -i -e 's/remme-core:latest/remme-core:$(RELEASE_NUMBER)/' $(RELEASE_NUMBER)-release/docker-compose/*.yml
 	cp -R config ./$(RELEASE_NUMBER)-release
