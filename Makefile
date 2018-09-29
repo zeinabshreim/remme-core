@@ -32,19 +32,19 @@ clean:
 docker_push:
 	$(BUILD_DIR)/push-docker.sh
 
-run_genesis: build
+run_genesis:
 	$(RUN_SCRIPT) -g -u
 
-run_genesis_bg: build
+run_genesis_bg:
 	$(RUN_SCRIPT) -g -u -b
 
 stop_genesis:
 	$(RUN_SCRIPT) -g -d
 
-run: build
+run:
 	$(RUN_SCRIPT) -u
 
-run_bg: build
+run_bg:
 	$(RUN_SCRIPT) -u -b
 
 stop:
