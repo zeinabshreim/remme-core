@@ -14,16 +14,13 @@
 # ------------------------------------------------------------------------
 
 .PHONY: clean run_genesis run_genesis_bg stop_genesis run run_bg stop run_docs
-.PHONY: run_logio run_logio_bg stop_logio test release docker_push
-
-BUILD_DEPS=$(wildcard build/** protos/** remme/** scripts/** Dockerfile requirements.txt setup.py)
-TEST_DEPS=$(wildcard tests/**)
-DOCS_DEPS=$(wildcard docs/**)
+.PHONY: run_logio run_logio_bg stop_logio test release docker_push docs build
+.PHONY: test
 
 RUN_SCRIPT=./scripts/run.sh
 BUILD_DIR=./build
 
-build: $(BUILD_DEPS)
+build:
 	$(BUILD_DIR)/build.sh
 
 clean:
@@ -50,7 +47,7 @@ run_bg:
 stop:
 	$(RUN_SCRIPT) -d
 
-docs: $(DOCS_DEPS)
+docs:
 	$(BUILD_DIR)/build-docs.sh
 
 run_docs:
@@ -65,7 +62,7 @@ run_logio_bg:
 stop_logio:
 	$(RUN_SCRIPT) -l -d
 
-test: $(BUILD_DEPS) $(TEST_DEPS)
+test:
 	$(BUILD_DIR)/test.sh
 
 release:
