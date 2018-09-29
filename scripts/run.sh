@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 GENESIS_MODE=0
 OPERATION_SPECIFIED=0

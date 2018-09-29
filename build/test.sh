@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 git submodule update --init
 docker build --target build -t remme/remme-core-dev:latest .

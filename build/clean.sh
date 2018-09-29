@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 IMAGES=$(docker images | grep -Po '(?<=remme\/)[a-z-]+(?=\s+latest)')
 
