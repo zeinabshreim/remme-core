@@ -45,6 +45,7 @@ if [ "$REMME_START_MODE" = "genesis" ]; then
         -k /etc/sawtooth/keys/validator.priv \
         "remme.settings.pub_key_encryption=$(cat /etc/sawtooth/keys/validator.pub)" \
         "remme.settings.genesis_owners=$(cat /etc/sawtooth/keys/validator.pub)" \
+        "remme.settings.storage_pub_key=$(cat /etc/sawtooth/keys/validator.pub)" \
         remme.settings.swap_comission=100 \
         -o settings_config.batch
 
@@ -57,7 +58,7 @@ if [ "$REMME_START_MODE" = "genesis" ]; then
     sawadm genesis $GENESIS_BATCHES
 fi
 
-if [ "$REMME_START_MODE" = "run" ]; then
+if [ "$REMME_START_MODE" = "run" ] && [ -s "/config/seeds-list.txt" ]; then
     SEEDS=$(sed ':a;N;$!ba;s/\n/,/g' /config/seeds-list.txt)
     ADDITIONAL_ARGS="$ADDITIONAL_ARGS --seeds $SEEDS --peers $SEEDS"
 fi

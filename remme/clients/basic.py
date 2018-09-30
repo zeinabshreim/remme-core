@@ -45,24 +45,29 @@ from sawtooth_signing import CryptoFactory, ParseError, create_context
 from sawtooth_signing.secp256k1 import Secp256k1PrivateKey
 
 from remme.protos.transaction_pb2 import TransactionPayload
-from remme.shared.exceptions import ClientException, KeyNotFound
+from remme.shared.exceptions import ClientException, KeyNotFound, ValidatorNotReadyException
 from remme.shared.utils import hash512, get_batch_id, message_to_dict
+
+from remme.shared.exceptions import ClientException
+from remme.shared.exceptions import KeyNotFound
+from remme.shared.utils import hash512
+
 from remme.shared.stream import Stream
-from remme.tp.account import AccountHandler, is_address
 from remme.settings import PRIV_KEY_FILE
 from remme.settings.default import load_toml_with_defaults
+from remme.tp.basic import is_address
+
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 class BasicClient:
-    def __init__(self, family_handler=None, test_helper=None, keyfile=None):
+    def __init__(self, family_handler=None, keyfile=None):
         config = load_toml_with_defaults('/config/remme-client-config.toml')['remme']['client']
 
         self.url = config['validator_rest_api_url']
         self._family_handler = family_handler() if callable(family_handler) else None
-        self.test_helper = test_helper
         self._stream = Stream(f'tcp://{ config["validator_ip"] }:{ config["validator_port"] }')
 
         if keyfile is None:
@@ -196,18 +201,19 @@ class BasicClient:
 
     def _handle_response(self, msg_type, resp_proto, req):
         self._stream.wait_for_ready()
+
         future = self._stream.send(
             message_type=msg_type,
             content=req.SerializeToString())
 
         resp = resp_proto()
+
         try:
             resp.ParseFromString(future.result().content)
         except (DecodeError, AttributeError):
             raise ClientException(
                 'Failed to parse "content" string from validator')
         except ValidatorConnectionError as vce:
-            LOGGER.error('Error: %s' % vce)
             raise ClientException(
                 'Failed with ZMQ interaction: {0}'.format(vce))
 
@@ -219,7 +225,10 @@ class BasicClient:
                 raise KeyNotFound("404")
 
         if resp.status != resp_proto.OK:
-            raise ClientException("Error: %s" % data)
+            LOGGER.error(f'The response indicated a not successful request: {data}')
+            if hasattr(resp_proto, 'NOT_READY') and resp_proto.NOT_READY == resp.status:
+                raise ValidatorNotReadyException()
+            raise ClientException(f"Error: {data}")
 
         return data
 
@@ -234,6 +243,7 @@ class BasicClient:
                                      ClientBlockListResponse,
                                      ClientBlockListRequest(
                                          paging=ClientPagingControls(limit=1)))
+
         block = resp['blocks'][0]
         header = BlockHeader()
         try:
@@ -306,6 +316,8 @@ class BasicClient:
         self._signer = new_signer
 
     def get_user_address(self):
+        from remme.tp.account import AccountHandler
+
         return AccountHandler().make_address_from_data(self._signer.get_public_key().as_hex())
 
     def _send_transaction(self, method, data_pb, addresses_input, addresses_output):
@@ -321,10 +333,6 @@ class BasicClient:
         addresses_input_output.extend(addresses_input)
         addresses_input_output.extend(addresses_output)
         addresses_input_output = list(set(addresses_input_output))
-        # forward transaction to test helper
-        if self.test_helper:
-            self.test_helper.send_transaction(method, data_pb, addresses_input_output)
-            return
 
         payload = TransactionPayload()
         payload.method = method

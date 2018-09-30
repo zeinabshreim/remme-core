@@ -72,14 +72,15 @@ def get_swap_close_payload(swap_id, secret_key):
 
 
 class AtomicSwapClient(BasicClient):
-    def __init__(self, test_helper=None):
-        super().__init__(AtomicSwapHandler, test_helper=test_helper)
+    def __init__(self):
+        super().__init__(AtomicSwapHandler)
 
     def swap_init(self, swap_init_payload):
         addresses_input = [
             self.make_address_from_data(swap_init_payload.swap_id),
             self.get_user_address(),
             _make_settings_key(SETTINGS_SWAP_COMMISSION),
+            ZERO_ADDRESS
         ]
         addresses_output = [
             self.make_address_from_data(swap_init_payload.swap_id),
