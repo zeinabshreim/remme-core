@@ -48,6 +48,13 @@ PUB_KEY_ORGANIZATION = 'REMME'
 PUB_KEY_MAX_VALIDITY = timedelta(365)
 PUB_KEY_STORE_PRICE = 10
 
+CRYPTOGRAPHY_HASH_TYPES = {
+    NewPubKeyPayload.SHA1: hashes.SHA1,
+    NewPubKeyPayload.SHA224: hashes.SHA224,
+    NewPubKeyPayload.SHA256: hashes.SHA256,
+    NewPubKeyPayload.SHA384: hashes.SHA384,
+    NewPubKeyPayload.SHA512: hashes.SHA512,
+}
 
 class PubKeyHandler(BasicHandler):
     def __init__(self):
@@ -85,20 +92,21 @@ class PubKeyHandler(BasicHandler):
             LOGGER.debug(f'entity_hash {transaction_payload.entity_hash}')
             raise InvalidTransaction('Entity hash or signature not a hex format')
 
+        hash_type = CRYPTOGRAPHY_HASH_TYPES[transaction_payload.hash_type]
         if transaction_payload.public_key_type == NewPubKeyPayload.RSA:
             if transaction_payload.rsa_signature_padding == NewPubKeyPayload.PSS:
-                _padding = padding.PSS(mgf=padding.MGF1(hashes.SHA512()), salt_length=padding.PSS.MAX_LENGTH)
+                _padding = padding.PSS(mgf=padding.MGF1(hash_type), salt_length=padding.PSS.MAX_LENGTH)
             elif transaction_payload.rsa_signature_padding == NewPubKeyPayload.PKCS1v15:
                 _padding = padding.PKCS1v15()
 
             try:
-                cert_signer_pubkey.verify(ehs_bytes, eh_bytes, _padding, hashes.SHA512())
+                cert_signer_pubkey.verify(ehs_bytes, eh_bytes, _padding, hash_type)
                 LOGGER.warn('HAZARD: Padding found: %s', _padding.name)
             except InvalidSignature:
                 raise InvalidTransaction('Invalid signature')
 
         elif transaction_payload.public_key_type == NewPubKeyPayload.ECDSA:
-            cert_signer_pubkey.verify(ehs_bytes, eh_bytes, ec.ECDSA(hashes.SHA256()))
+            cert_signer_pubkey.verify(ehs_bytes, eh_bytes, ec.ECDSA(hash_type))
 
         elif transaction_payload.public_key_type == NewPubKeyPayload.EdDSA:
             verifying_key = ed25519.VerifyingKey(cert_signer_pubkey.public_bytes())
