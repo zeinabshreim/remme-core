@@ -40,12 +40,6 @@ services:
       target: sawtooth-block-info-tp
     image: remme/sawtooth-block-info-tp:latest
 
-  poet-validator-registry:
-    build:
-      context: ..
-      target: validator-registry
-    image: remme/sawtooth-poet-validator-registry:latest
-
   remme-tp:
     build:
       context: ..
