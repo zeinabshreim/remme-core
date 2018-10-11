@@ -17,25 +17,25 @@ version: '3.4'
 
 services:
   validator:
-    depends_on:
-      - remme-genesis
-    volumes:
-      - genesis_data:/genesis/batch
-      - user_keys:/etc/sawtooth/keys
-    environment:
-      - REMME_START_MODE=genesis
+    logging:
+      driver: none
+  
+  validator-rest-api:
+    logging:
+      driver: none
 
-  remme-genesis:
-    container_name: remme_genesis
-    image: remme/remme-core:latest
-    volumes:
-      - user_keys:/etc/sawtooth/keys
-      - genesis_data:/genesis/batch
-      - ../config/remme-client-config.toml:/config/remme-client-config.toml
-      - ../config/remme-genesis-config.toml:/config/remme-genesis-config.toml
-    environment:
-      - REMME_START_MODE=genesis
-    command: sh /projects/scripts/genesis.sh
+  block-info-tp:
+    logging:
+      driver: none
 
-volumes:
-  genesis_data:
+  settings-tp:
+    logging:
+      driver: none
+
+  remme-tp:
+    logging:
+      driver: none
+
+  remme-rest-api:
+    logging:
+      driver: none
