@@ -92,7 +92,7 @@ class PubKeyHandler(BasicHandler):
             LOGGER.debug(f'entity_hash {transaction_payload.entity_hash}')
             raise InvalidTransaction('Entity hash or signature not a hex format')
 
-        hash_type = CRYPTOGRAPHY_HASH_TYPES[transaction_payload.hash_type]
+        hash_type = CRYPTOGRAPHY_HASH_TYPES[transaction_payload.hash_type]()
         if transaction_payload.public_key_type == NewPubKeyPayload.RSA:
             if transaction_payload.rsa_signature_padding == NewPubKeyPayload.PSS:
                 _padding = padding.PSS(mgf=padding.MGF1(hash_type), salt_length=padding.PSS.MAX_LENGTH)

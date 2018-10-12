@@ -42,7 +42,7 @@ class PubKeyClient(BasicClient):
     @classmethod
     def get_new_pub_key_payload(self, public_key, entity_hash, entity_hash_signature, valid_from, valid_to,
                                 public_key_type=NewPubKeyPayload.RSA, entity_type=NewPubKeyPayload.PERSONAL,
-                                rsa_signature_padding=NewPubKeyPayload.PSS):
+                                rsa_signature_padding=NewPubKeyPayload.PSS, hash_type=NewPubKeyPayload.SHA512):
         payload = NewPubKeyPayload()
         payload.public_key = public_key
         payload.public_key_type = public_key_type
@@ -52,6 +52,7 @@ class PubKeyClient(BasicClient):
         payload.valid_from = valid_from
         payload.valid_to = valid_to
         payload.rsa_signature_padding = rsa_signature_padding
+        payload.hash_type = hash_type
 
         return payload
 
